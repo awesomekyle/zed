@@ -5,7 +5,7 @@ use editor::{Editor, EditorElement, EditorStyle};
 use futures::Stream;
 use futures::{FutureExt, StreamExt, future::BoxFuture};
 use gpui::{
-    AnyView, App, AsyncApp, Context, Entity, FontStyle, Subscription, Task, TextStyle, WhiteSpace,
+    AnyView, App, AsyncApp, Context, Entity, FontStyle, Subscription, Task, TextStyle, WhiteSpace, Window,
 };
 use http_client::HttpClient;
 use language_model::{
@@ -15,6 +15,7 @@ use language_model::{
     LanguageModelToolChoice, LanguageModelToolResultContent, LanguageModelToolUse, MessageContent,
     RateLimiter, Role, StopReason,
 };
+use menu;
 use open_ai::{ImageUrl, Model, ResponseStreamEvent, stream_completion};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -33,10 +34,19 @@ use crate::provider::open_ai::{OpenAiEventMapper, into_open_ai, count_open_ai_to
 const PROVIDER_ID: &str = "openai-compatible";
 const PROVIDER_NAME: &str = "OpenAI Compatible";
 
-#[derive(Default, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OpenAiCompatibleSettings {
     pub api_url: String,
     pub available_models: Vec<AvailableModel>,
+}
+
+impl Default for OpenAiCompatibleSettings {
+    fn default() -> Self {
+        Self {
+            api_url: "https://your-openai-compatible-service.com/v1".to_string(),
+            available_models: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -122,7 +132,7 @@ impl State {
                     .await?
                     .ok_or(AuthenticateError::CredentialsNotFound)?;
                 (
-                    String::from_utf8(api_key).context("invalid {PROVIDER_NAME} API key")?,
+                    String::from_utf8(api_key).context(format!("invalid {} API key", PROVIDER_NAME))?,
                     false,
                 )
             };
@@ -375,7 +385,6 @@ impl LanguageModel for OpenAiCompatibleLanguageModel {
 
 struct ConfigurationView {
     api_key_editor: Entity<Editor>,
-    api_url_editor: Entity<Editor>,
     state: gpui::Entity<State>,
     load_credentials_task: Option<Task<()>>,
 }
@@ -385,12 +394,6 @@ impl ConfigurationView {
         let api_key_editor = cx.new(|cx| {
             let mut editor = Editor::single_line(window, cx);
             editor.set_placeholder_text("Enter your API key", cx);
-            editor
-        });
-
-        let api_url_editor = cx.new(|cx| {
-            let mut editor = Editor::single_line(window, cx);
-            editor.set_placeholder_text("https://api.example.com/v1", cx);
             editor
         });
 
@@ -420,7 +423,6 @@ impl ConfigurationView {
 
         Self {
             api_key_editor,
-            api_url_editor,
             state,
             load_credentials_task,
         }
@@ -481,31 +483,6 @@ impl ConfigurationView {
         )
     }
 
-    fn render_api_url_editor(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let settings = ThemeSettings::get_global(cx);
-        let text_style = TextStyle {
-            color: cx.theme().colors().text,
-            font_family: settings.ui_font.family.clone(),
-            font_features: settings.ui_font.features.clone(),
-            font_fallbacks: settings.ui_font.fallbacks.clone(),
-            font_size: rems(0.875).into(),
-            font_weight: settings.ui_font.weight,
-            font_style: FontStyle::Normal,
-            line_height: relative(1.3),
-            white_space: WhiteSpace::Normal,
-            ..Default::default()
-        };
-        EditorElement::new(
-            &self.api_url_editor,
-            EditorStyle {
-                background: cx.theme().colors().editor_background,
-                local_player: cx.theme().players().local(),
-                text: text_style,
-                ..Default::default()
-            },
-        )
-    }
-
     fn should_render_editor(&self, cx: &mut Context<Self>) -> bool {
         !self.state.read(cx).is_authenticated()
     }
@@ -521,46 +498,30 @@ impl Render for ConfigurationView {
             v_flex()
                 .size_full()
                 .on_action(cx.listener(Self::save_api_key))
-                .child(Label::new("To use an OpenAI-compatible service with Zed, you need to add an API key and URL:"))
+                .child(Label::new("To use an OpenAI-compatible service with Zed, you need to configure it:"))
                 .child(
                     List::new()
                         .child(InstructionListItem::text_only(
-                            "Enter the base URL for your OpenAI-compatible API service",
+                            "First, set the API URL in your settings.json under 'language_models.openai_compatible.api_url'",
                         ))
                         .child(InstructionListItem::text_only(
-                            "Enter your API key for the service",
+                            "Then enter your API key below and hit enter",
                         ))
                         .child(InstructionListItem::text_only(
-                            "Hit enter to start using the assistant",
+                            "Configure available models in your settings if needed",
                         )),
                 )
                 .child(
-                    v_flex()
-                        .gap_2()
-                        .child(Label::new("API URL:"))
-                        .child(
-                            h_flex()
-                                .w_full()
-                                .px_2()
-                                .py_1()
-                                .bg(cx.theme().colors().editor_background)
-                                .border_1()
-                                .border_color(cx.theme().colors().border)
-                                .rounded_sm()
-                                .child(self.render_api_url_editor(cx)),
-                        )
-                        .child(Label::new("API Key:"))
-                        .child(
-                            h_flex()
-                                .w_full()
-                                .px_2()
-                                .py_1()
-                                .bg(cx.theme().colors().editor_background)
-                                .border_1()
-                                .border_color(cx.theme().colors().border)
-                                .rounded_sm()
-                                .child(self.render_api_key_editor(cx)),
-                        )
+                    h_flex()
+                        .w_full()
+                        .my_2()
+                        .px_2()
+                        .py_1()
+                        .bg(cx.theme().colors().editor_background)
+                        .border_1()
+                        .border_color(cx.theme().colors().border)
+                        .rounded_sm()
+                        .child(self.render_api_key_editor(cx)),
                 )
                 .child(
                     Label::new(
