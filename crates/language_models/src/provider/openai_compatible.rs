@@ -565,3 +565,37 @@ impl Render for ConfigurationView {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_provider_constants() {
+        assert_eq!(PROVIDER_ID, "openai-compatible");
+        assert_eq!(PROVIDER_NAME, "OpenAI Compatible");
+    }
+
+    #[test]
+    fn test_default_settings() {
+        let settings = OpenAiCompatibleSettings::default();
+        assert_eq!(settings.api_url, "https://your-openai-compatible-service.com/v1");
+        assert!(settings.available_models.is_empty());
+    }
+
+    #[test]
+    fn test_available_model_serialization() {
+        let model = AvailableModel {
+            name: "test-model".to_string(),
+            display_name: Some("Test Model".to_string()),
+            max_tokens: 4096,
+            max_output_tokens: Some(1024),
+            max_completion_tokens: Some(1024),
+        };
+
+        // Test that the model can be serialized and deserialized
+        let json = serde_json::to_string(&model).unwrap();
+        let deserialized: AvailableModel = serde_json::from_str(&json).unwrap();
+        assert_eq!(model, deserialized);
+    }
+}
