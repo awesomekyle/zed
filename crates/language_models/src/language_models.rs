@@ -19,6 +19,7 @@ use crate::provider::lmstudio::LmStudioLanguageModelProvider;
 use crate::provider::mistral::MistralLanguageModelProvider;
 use crate::provider::ollama::OllamaLanguageModelProvider;
 use crate::provider::open_ai::OpenAiLanguageModelProvider;
+use crate::provider::openai_compatible::OpenAiCompatibleLanguageModelProvider;
 use crate::provider::open_router::OpenRouterLanguageModelProvider;
 pub use crate::settings::*;
 
@@ -47,6 +48,10 @@ fn register_language_model_providers(
     );
     registry.register_provider(
         OpenAiLanguageModelProvider::new(client.http_client(), cx),
+        cx,
+    );
+    registry.register_provider(
+        OpenAiCompatibleLanguageModelProvider::new(client.http_client(), cx),
         cx,
     );
     registry.register_provider(
