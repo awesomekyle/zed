@@ -20,6 +20,7 @@ use crate::provider::{
     mistral::MistralSettings,
     ollama::OllamaSettings,
     open_ai::OpenAiSettings,
+    openai_compatible::OpenAiCompatibleSettings,
     open_router::OpenRouterSettings,
 };
 
@@ -62,6 +63,7 @@ pub struct AllLanguageModelSettings {
     pub bedrock: AmazonBedrockSettings,
     pub ollama: OllamaSettings,
     pub openai: OpenAiSettings,
+    pub openai_compatible: OpenAiCompatibleSettings,
     pub open_router: OpenRouterSettings,
     pub zed_dot_dev: ZedDotDevSettings,
     pub google: GoogleSettings,
@@ -78,6 +80,7 @@ pub struct AllLanguageModelSettingsContent {
     pub ollama: Option<OllamaSettingsContent>,
     pub lmstudio: Option<LmStudioSettingsContent>,
     pub openai: Option<OpenAiSettingsContent>,
+    pub openai_compatible: Option<OpenAiCompatibleSettingsContent>,
     pub open_router: Option<OpenRouterSettingsContent>,
     #[serde(rename = "zed.dev")]
     pub zed_dot_dev: Option<ZedDotDevSettingsContent>,
@@ -284,6 +287,12 @@ pub struct OpenRouterSettingsContent {
     pub available_models: Option<Vec<provider::open_router::AvailableModel>>,
 }
 
+#[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq, JsonSchema)]
+pub struct OpenAiCompatibleSettingsContent {
+    pub api_url: Option<String>,
+    pub available_models: Option<Vec<provider::openai_compatible::AvailableModel>>,
+}
+
 impl settings::Settings for AllLanguageModelSettings {
     const KEY: Option<&'static str> = Some("language_models");
 
@@ -432,6 +441,19 @@ impl settings::Settings for AllLanguageModelSettings {
             merge(
                 &mut settings.open_router.available_models,
                 open_router
+                    .as_ref()
+                    .and_then(|s| s.available_models.clone()),
+            );
+
+            // OpenAI Compatible
+            let openai_compatible = value.openai_compatible.clone();
+            merge(
+                &mut settings.openai_compatible.api_url,
+                openai_compatible.as_ref().and_then(|s| s.api_url.clone()),
+            );
+            merge(
+                &mut settings.openai_compatible.available_models,
+                openai_compatible
                     .as_ref()
                     .and_then(|s| s.available_models.clone()),
             );

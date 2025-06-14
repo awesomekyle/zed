@@ -21,7 +21,7 @@ Here's an overview of the supported providers and tool call support:
 | [Ollama](#ollama)                               | ✅                                                                                                                                                                          |
 | [OpenAI](#openai)                               | ✅                                                                                                                                                                          |
 | [OpenRouter](#openrouter)                       | ✅                                                                                                                                                                          |
-| [OpenAI API Compatible](#openai-api-compatible) | 🚫                                                                                                                                                                          |
+| [OpenAI API Compatible](#openai-api-compatible) | ✅                                                                                                                                                                          |
 
 ## Use Your Own Keys {#use-your-own-keys}
 
@@ -448,13 +448,44 @@ Zed will also use the `OPENROUTER_API_KEY` environment variable if it's defined.
 
 ### OpenAI API Compatible {#openai-api-compatible}
 
-Zed supports using OpenAI compatible APIs by specifying a custom `endpoint` and `available_models` for the OpenAI provider.
+> ✅ Supports tool use
 
-#### X.ai Grok
+Zed supports using OpenAI compatible APIs through a dedicated provider. This allows you to use both the official OpenAI provider and any OpenAI-compatible service simultaneously.
 
-Example configuration for using X.ai Grok with Zed:
+1. Open the settings view (`agent: open configuration`) and go to the OpenAI Compatible section
+2. Enter your API base URL (e.g., `https://api.x.ai/v1`)
+3. Enter your API key for the service
+4. Configure available models in your settings
+
+#### Configuration
+
+You can configure the OpenAI Compatible provider in your `settings.json`:
 
 ```json
+{
+  "language_models": {
+    "openai_compatible": {
+      "api_url": "https://api.x.ai/v1",
+      "available_models": [
+        {
+          "name": "grok-beta",
+          "display_name": "X.ai Grok (Beta)",
+          "max_tokens": 131072
+        }
+      ]
+    }
+  }
+}
+```
+
+The API key will be saved in your keychain, or you can set the `OPENAI_COMPATIBLE_API_KEY` environment variable.
+
+#### Legacy Configuration
+
+You can still use OpenAI compatible APIs by specifying a custom `endpoint` and `available_models` for the OpenAI provider, but this will override the official OpenAI provider:
+
+```json
+{
   "language_models": {
     "openai": {
       "api_url": "https://api.x.ai/v1",
@@ -466,8 +497,9 @@ Example configuration for using X.ai Grok with Zed:
         }
       ],
       "version": "1"
-    },
+    }
   }
+}
 ```
 
 ## Advanced Configuration {#advanced-configuration}
